@@ -1,0 +1,1067 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MediMate Neural Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-0: #040b14;
+      --bg-1: #091522;
+      --panel: rgba(10, 24, 38, 0.72);
+      --panel-2: rgba(6, 18, 29, 0.82);
+      --text: #e8f6ff;
+      --muted: #89a6bb;
+      --line: rgba(132, 183, 214, 0.22);
+      --accent: #35d6ff;
+      --accent-2: #24f4b2;
+      --warn: #ffb74d;
+      --danger: #ff6f61;
+      --glow: 0 0 28px rgba(53, 214, 255, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    @keyframes floatPulse {
+      0% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-10px) scale(1.03); }
+      100% { transform: translateY(0px) scale(1); }
+    }
+
+    @keyframes drift {
+      0% { transform: translateX(-8%) translateY(-4%); }
+      100% { transform: translateX(8%) translateY(6%); }
+    }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 500px at 12% 0%, rgba(36, 244, 178, 0.16), transparent 65%),
+        radial-gradient(1000px 550px at 90% 0%, rgba(53, 214, 255, 0.18), transparent 70%),
+        linear-gradient(160deg, var(--bg-0), var(--bg-1));
+      overflow-x: hidden;
+      display: grid;
+      place-items: center;
+      padding: 10px;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: -10%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    body::before {
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(255, 255, 255, 0.02) 0px,
+        rgba(255, 255, 255, 0.02) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+      opacity: 0.22;
+    }
+
+    body::after {
+      background: radial-gradient(circle, rgba(83, 161, 209, 0.12) 1px, transparent 1px);
+      background-size: 28px 28px;
+      animation: drift 8s ease-in-out infinite alternate;
+      opacity: 0.35;
+    }
+
+    .frame {
+      position: relative;
+      z-index: 1;
+      width: min(1120px, 100%);
+      height: calc(100vh - 20px);
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(140deg, rgba(13, 30, 47, 0.75), rgba(9, 21, 34, 0.86));
+      backdrop-filter: blur(8px);
+      box-shadow: 0 24px 90px rgba(4, 8, 16, 0.52), inset 0 1px 0 rgba(180, 224, 255, 0.1);
+      overflow: hidden;
+    }
+
+    .left {
+      border-right: 1px solid var(--line);
+      padding: 24px;
+      background: linear-gradient(180deg, rgba(10, 29, 44, 0.9), rgba(7, 18, 28, 0.88));
+      display: grid;
+      align-content: start;
+      gap: 18px;
+      min-height: 0;
+      overflow-y: auto;
+    }
+
+    .brand {
+      font-family: "Syncopate", sans-serif;
+      letter-spacing: 1.2px;
+      font-size: 0.92rem;
+      text-transform: uppercase;
+      color: #bfefff;
+      margin: 0;
+    }
+
+    .hero {
+      margin: 0;
+      font-size: 1.55rem;
+      line-height: 1.2;
+      max-width: 15ch;
+    }
+
+    .hero span {
+      color: var(--accent-2);
+      text-shadow: 0 0 18px rgba(36, 244, 178, 0.5);
+    }
+
+    .status {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: rgba(6, 18, 28, 0.56);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: var(--warn);
+      box-shadow: 0 0 10px rgba(255, 183, 77, 0.8);
+      transition: background 0.2s ease;
+    }
+
+    .dot.ok {
+      background: var(--accent-2);
+      box-shadow: 0 0 12px rgba(36, 244, 178, 0.9);
+    }
+
+    .dot.error {
+      background: var(--danger);
+      box-shadow: 0 0 12px rgba(255, 111, 97, 0.9);
+    }
+
+    .orb {
+      width: 100%;
+      aspect-ratio: 1;
+      max-width: 180px;
+      border-radius: 50%;
+      margin-inline: auto;
+      background:
+        radial-gradient(circle at 34% 28%, rgba(255, 255, 255, 0.35), transparent 28%),
+        radial-gradient(circle at 66% 70%, rgba(36, 244, 178, 0.25), transparent 42%),
+        linear-gradient(145deg, #102e4a, #0b2034 60%, #0a1626);
+      border: 1px solid rgba(157, 216, 246, 0.3);
+      box-shadow: var(--glow), inset 0 0 34px rgba(53, 214, 255, 0.22);
+      animation: floatPulse 4.5s ease-in-out infinite;
+    }
+
+    .mini {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+    }
+
+    .onboard {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(8, 22, 33, 0.68);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .onboard h3 {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #bfefff;
+      font-weight: 600;
+    }
+
+    .onboard label {
+      display: grid;
+      gap: 4px;
+      color: #9eb6c6;
+      font-size: 0.77rem;
+    }
+
+    .onboard select,
+    .onboard textarea {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid rgba(124, 171, 199, 0.35);
+      background: rgba(7, 24, 36, 0.95);
+      color: var(--text);
+      padding: 8px 10px;
+      font-size: 0.84rem;
+      outline: none;
+      resize: vertical;
+      min-height: 36px;
+      font-family: "Space Grotesk", sans-serif;
+    }
+
+    .toggle {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: #9eb6c6;
+      font-size: 0.78rem;
+    }
+
+    .toggle input {
+      width: auto;
+      margin: 0;
+    }
+
+    .legal-links {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ghost {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.72rem;
+      color: #9bc6df;
+      background: rgba(8, 20, 30, 0.76);
+      cursor: pointer;
+    }
+
+    .advice-card {
+      display: grid;
+      gap: 7px;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .advice-title {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8ec7e5;
+    }
+
+    .confidence {
+      display: inline-flex;
+      width: fit-content;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #032233;
+      background: linear-gradient(135deg, #74e7ff, #42d8a7);
+    }
+
+    .source-links {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+      max-width: 100%;
+    }
+
+    .source-links li {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .source-links a {
+      color: #9fe9ff;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .emergency-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .emergency-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      padding: 10px 14px;
+      text-decoration: none;
+      font-size: 0.84rem;
+      font-weight: 700;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #031722;
+      background: linear-gradient(135deg, #ffd271, #ff9f65);
+    }
+
+    .emergency-btn.secondary {
+      color: #dff6ff;
+      background: linear-gradient(135deg, #0f3650, #1f5977);
+    }
+
+    dialog {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      max-width: 660px;
+      width: calc(100% - 24px);
+      background: #081724;
+      color: #d8edf8;
+      padding: 16px;
+    }
+
+    dialog::backdrop {
+      background: rgba(3, 8, 12, 0.76);
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
+    .right {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-height: 0;
+      height: 100%;
+      background: linear-gradient(180deg, rgba(9, 24, 37, 0.78), rgba(5, 16, 26, 0.82));
+    }
+
+    .top {
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .top h1 {
+      margin: 0;
+      font-size: clamp(1.1rem, 2.2vw, 1.35rem);
+      letter-spacing: 0.3px;
+      font-weight: 600;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: rgba(8, 21, 32, 0.76);
+      white-space: nowrap;
+    }
+
+    #messages {
+      padding: 16px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 0;
+      height: 100%;
+      padding-bottom: 8px;
+    }
+
+    .msg {
+      max-width: min(88%, 700px);
+      border-radius: 14px;
+      padding: 12px 14px;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      border: 1px solid transparent;
+      animation: reveal 220ms ease;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .user {
+      margin-left: auto;
+      background: linear-gradient(125deg, rgba(53, 214, 255, 0.18), rgba(24, 99, 129, 0.25));
+      border-color: rgba(113, 206, 255, 0.35);
+      box-shadow: inset 0 0 0 1px rgba(17, 56, 75, 0.65);
+    }
+
+    .bot {
+      margin-right: auto;
+      background: linear-gradient(125deg, rgba(36, 244, 178, 0.12), rgba(10, 36, 44, 0.55));
+      border-color: rgba(70, 193, 157, 0.3);
+      box-shadow: inset 0 0 0 1px rgba(11, 48, 56, 0.7);
+    }
+
+    .typing {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #87dff7;
+      animation: floatPulse 1s ease-in-out infinite;
+    }
+
+    .typing span:nth-child(2) { animation-delay: 0.1s; }
+    .typing span:nth-child(3) { animation-delay: 0.2s; }
+
+    .composer {
+      border-top: 1px solid var(--line);
+      padding: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      background: rgba(6, 17, 26, 0.88);
+      position: relative;
+      z-index: 1;
+    }
+
+    input {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid rgba(124, 171, 199, 0.35);
+      background: rgba(7, 24, 36, 0.95);
+      color: var(--text);
+      padding: 12px 14px;
+      font-size: 0.98rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input::placeholder {
+      color: #6f8ca0;
+    }
+
+    input:focus {
+      border-color: rgba(53, 214, 255, 0.7);
+      box-shadow: 0 0 0 4px rgba(53, 214, 255, 0.14);
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      min-width: 108px;
+      padding: 0 16px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: #002439;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      cursor: pointer;
+      box-shadow: var(--glow);
+      transition: transform 0.14s ease, filter 0.14s ease;
+    }
+
+    button:hover {
+      filter: brightness(1.06);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.64;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .foot {
+      display: none;
+    }
+
+    @media (max-width: 960px) {
+      .frame {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+
+      .left {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        gap: 12px;
+      }
+
+      .hero {
+        max-width: none;
+      }
+
+      .orb {
+        display: none;
+      }
+
+      .right {
+        min-height: 72vh;
+        height: 72vh;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="frame">
+    <aside class="left">
+      <p class="brand" data-i18n="brand">MediMate Neural Console</p>
+      <h2 class="hero"><span data-i18n="heroTitle">Ayurvedic Guidance</span> <span data-i18n="heroSuffix">powered by live AI search.</span></h2>
+      <div class="status">
+        <span id="statusText">System check pending</span>
+        <span id="statusDot" class="dot" aria-hidden="true"></span>
+      </div>
+      <div class="orb" aria-hidden="true"></div>
+      <p class="mini" data-i18n="miniText">Describe symptoms in plain language. The assistant returns informational options and safety guidance, not diagnosis.</p>
+
+      <section class="onboard">
+        <h3 id="onboardTitle" data-i18n="onboardTitle">Safety onboarding</h3>
+        <label>
+          <span data-i18n="labelLanguage">Language</span>
+          <select id="languageSelect">
+            <option value="en" data-i18n="langEnglish">English</option>
+            <option value="hi" data-i18n="langHindi">Hindi</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="labelAge">Age group</span>
+          <select id="ageGroup">
+            <option value="" data-i18n="optSelect">Select</option>
+            <option value="child" data-i18n="optChild">Child</option>
+            <option value="teen" data-i18n="optTeen">Teen</option>
+            <option value="adult" data-i18n="optAdult">Adult</option>
+            <option value="older_adult" data-i18n="optOlderAdult">Older adult</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="labelPregnancy">Pregnancy status</span>
+          <select id="pregnancyStatus">
+            <option value="" data-i18n="optSelect">Select</option>
+            <option value="not_applicable" data-i18n="optNotApplicable">Not applicable</option>
+            <option value="pregnant" data-i18n="optPregnant">Pregnant</option>
+            <option value="breastfeeding" data-i18n="optBreastfeeding">Breastfeeding</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="labelGoals">Goals</span>
+          <select id="goals">
+            <option value="general_relief" data-i18n="optGeneralRelief">General relief</option>
+            <option value="prevention" data-i18n="optPrevention">Prevention</option>
+            <option value="digestive_support" data-i18n="optDigestiveSupport">Digestive support</option>
+            <option value="immunity_support" data-i18n="optImmunitySupport">Immunity support</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="labelDiet">Diet type</span>
+          <select id="dietType">
+            <option value="mixed" data-i18n="optMixed">Mixed</option>
+            <option value="vegetarian" data-i18n="optVegetarian">Vegetarian</option>
+            <option value="vegan" data-i18n="optVegan">Vegan</option>
+            <option value="other" data-i18n="optOther">Other</option>
+          </select>
+        </label>
+        <label>
+          <span data-i18n="labelAllergies">Allergies</span>
+          <textarea id="allergies" rows="2" placeholder="Example: penicillin, peanuts" data-i18n-placeholder="phAllergies"></textarea>
+        </label>
+        <label>
+          <span data-i18n="labelCurrentMeds">Current medications</span>
+          <textarea id="currentMeds" rows="2" placeholder="Example: metformin 500mg" data-i18n-placeholder="phCurrentMeds"></textarea>
+        </label>
+        <label>
+          <span data-i18n="labelChronic">Chronic conditions</span>
+          <textarea id="chronicConditions" rows="2" placeholder="Example: diabetes, hypertension" data-i18n-placeholder="phChronic"></textarea>
+        </label>
+        <label class="toggle">
+          <input id="memoryToggle" type="checkbox" checked />
+          <span data-i18n="toggleMemory">Allow conversation memory for better follow-up context</span>
+        </label>
+        <label class="toggle">
+          <input id="consentAck" type="checkbox" />
+          <span data-i18n="toggleConsent">I understand this is not a diagnosis and I agree to informational use only.</span>
+        </label>
+        <div class="legal-links">
+          <button type="button" id="termsBtn" class="ghost" data-i18n="btnTerms">Terms</button>
+          <button type="button" id="privacyBtn" class="ghost" data-i18n="btnPrivacy">Privacy</button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="right">
+      <header class="top">
+        <h1 data-i18n="chatTitle">Clinical Chat Stream</h1>
+        <span class="chip" id="modeChip">Mode: informational</span>
+      </header>
+
+      <section id="messages" aria-live="polite"></section>
+
+      <form id="chat-form" class="composer">
+        <input id="prompt" type="text" placeholder="Example: I have acid reflux and gas after meals" data-i18n-placeholder="phPrompt" required />
+        <button id="send" type="submit" data-i18n="btnSend">Send</button>
+      </form>
+
+      <p class="foot" data-i18n="footDisclaimer">Medical disclaimer: this assistant provides general information only. For severe symptoms, consult a licensed doctor immediately.</p>
+    </section>
+  </main>
+
+  <dialog id="legalDialog">
+    <h3 id="legalTitle">Legal</h3>
+    <div id="legalContent">
+      <p>This assistant provides general information and does not replace qualified medical advice.</p>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" id="closeLegal" data-i18n="btnClose">Close</button>
+    </div>
+  </dialog>
+
+  <script>
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('chat-form');
+    const promptInput = document.getElementById('prompt');
+    const sendBtn = document.getElementById('send');
+    const statusText = document.getElementById('statusText');
+    const statusDot = document.getElementById('statusDot');
+    const modeChip = document.getElementById('modeChip');
+    const languageSelect = document.getElementById('languageSelect');
+    const consentAck = document.getElementById('consentAck');
+    const memoryToggle = document.getElementById('memoryToggle');
+    const legalDialog = document.getElementById('legalDialog');
+    const legalTitle = document.getElementById('legalTitle');
+    const legalContent = document.getElementById('legalContent');
+    const termsBtn = document.getElementById('termsBtn');
+    const privacyBtn = document.getElementById('privacyBtn');
+    const closeLegal = document.getElementById('closeLegal');
+
+    const ageGroup = document.getElementById('ageGroup');
+    const pregnancyStatus = document.getElementById('pregnancyStatus');
+    const goals = document.getElementById('goals');
+    const dietType = document.getElementById('dietType');
+    const allergies = document.getElementById('allergies');
+    const currentMeds = document.getElementById('currentMeds');
+    const chronicConditions = document.getElementById('chronicConditions');
+
+    const conversationHistory = [];
+
+    const uiText = {
+      en: {
+        greeting: 'Hello. Share your symptoms and I will provide structured informational guidance.',
+        consentError: 'Please accept the not-a-diagnosis consent before using chat.',
+        mode: 'Mode: informational',
+        networkError: 'Network error',
+        genericError: 'Request failed',
+        noResponse: 'No response received.',
+        emergencyBadge: 'Emergency triage alert',
+        emergencyFallback: 'Emergency risk detected',
+        actionCall108: 'Call 108 now',
+        actionNearestHospital: 'Find nearest emergency hospital',
+        followupBadge: 'Safety check required',
+        followupFallback: 'Please complete safety details.',
+        adviceConfidence: 'Confidence',
+        adviceSymptom: 'Symptom',
+        adviceOptions: 'Suggested options',
+        adviceDosage: 'Dosage guidance',
+        adviceWarnings: 'Warnings',
+        adviceDoctor: 'When to see doctor',
+        adviceWhy: 'Why this was suggested',
+        adviceSources: 'Source links',
+        noSources: 'No source links available.',
+        notSpecified: 'Not specified',
+        btnClose: 'Close',
+        brand: 'MediMate Neural Console',
+        heroTitle: 'Ayurvedic Guidance',
+        heroSuffix: 'powered by live AI search.',
+        miniText: 'Describe symptoms in plain language. The assistant returns informational options and safety guidance, not diagnosis.',
+        onboardTitle: 'Safety onboarding',
+        labelLanguage: 'Language',
+        langEnglish: 'English',
+        langHindi: 'Hindi',
+        labelAge: 'Age group',
+        optSelect: 'Select',
+        optChild: 'Child',
+        optTeen: 'Teen',
+        optAdult: 'Adult',
+        optOlderAdult: 'Older adult',
+        labelPregnancy: 'Pregnancy status',
+        optNotApplicable: 'Not applicable',
+        optPregnant: 'Pregnant',
+        optBreastfeeding: 'Breastfeeding',
+        labelGoals: 'Goals',
+        optGeneralRelief: 'General relief',
+        optPrevention: 'Prevention',
+        optDigestiveSupport: 'Digestive support',
+        optImmunitySupport: 'Immunity support',
+        labelDiet: 'Diet type',
+        optMixed: 'Mixed',
+        optVegetarian: 'Vegetarian',
+        optVegan: 'Vegan',
+        optOther: 'Other',
+        labelAllergies: 'Allergies',
+        phAllergies: 'Example: penicillin, peanuts',
+        labelCurrentMeds: 'Current medications',
+        phCurrentMeds: 'Example: metformin 500mg',
+        labelChronic: 'Chronic conditions',
+        phChronic: 'Example: diabetes, hypertension',
+        toggleMemory: 'Allow conversation memory for better follow-up context',
+        toggleConsent: 'I understand this is not a diagnosis and I agree to informational use only.',
+        btnTerms: 'Terms',
+        btnPrivacy: 'Privacy',
+        chatTitle: 'Clinical Chat Stream',
+        phPrompt: 'Example: I have acid reflux and gas after meals',
+        btnSend: 'Send',
+        footDisclaimer: 'Medical disclaimer: this assistant provides general information only. For severe symptoms, consult a licensed doctor immediately.',
+        termsTitle: 'Terms of Use',
+        privacyTitle: 'Privacy Notice',
+        termsBody: `
+          <p>MediMate provides general health information only and does not diagnose medical conditions.</p>
+          <p>In emergencies, contact local emergency services immediately. India emergency ambulance: 108.</p>
+          <p>By using this assistant, you agree that recommendations are informational and must be reviewed by a licensed doctor.</p>
+        `,
+        privacyBody: `
+          <p>Your chat data can be sent to AI providers for response generation.</p>
+          <p>Enable memory only if you want previous messages to be reused for better context.</p>
+          <p>Avoid sharing highly sensitive personal identifiers in chat.</p>
+        `,
+      },
+      hi: {
+        greeting: 'Namaste. Kripya apne lakshan batayein, main sanrachit surakshit jankari dunga.',
+        consentError: 'Chat istemal karne se pehle kripya not-a-diagnosis consent svikar karein.',
+        mode: 'Mode: jankari matra (Hindi)',
+        networkError: 'Network truti',
+        genericError: 'Anurodh asafal raha',
+        noResponse: 'Koi uttar prapt nahi hua.',
+        emergencyBadge: 'Aapatkalin triage alert',
+        emergencyFallback: 'Aapatkalin jokhim pahchana gaya',
+        actionCall108: 'Abhi 108 par call karein',
+        actionNearestHospital: 'Nazdiki emergency hospital dhundhein',
+        followupBadge: 'Suraksha janch avashyak',
+        followupFallback: 'Kripya suraksha vivaran poora karein.',
+        adviceConfidence: 'Vishwas star',
+        adviceSymptom: 'Lakshan',
+        adviceOptions: 'Sujhaye gaye vikalp',
+        adviceDosage: 'Matra margdarshan',
+        adviceWarnings: 'Chetavani',
+        adviceDoctor: 'Doctor se kab milen',
+        adviceWhy: 'Yeh sujhav kyon diya gaya',
+        adviceSources: 'Srot links',
+        noSources: 'Koi srot links uplabdh nahi.',
+        notSpecified: 'Nirdharit nahi',
+        btnClose: 'Band karein',
+        brand: 'MediMate Neural Console',
+        heroTitle: 'Ayurvedic Margdarshan',
+        heroSuffix: 'live AI search ke saath.',
+        miniText: 'Lakshan seedhi bhasha mein batayein. Assistant diagnosis nahi, balki jankari aur suraksha margdarshan deta hai.',
+        onboardTitle: 'Suraksha onboarding',
+        labelLanguage: 'Bhasha',
+        langEnglish: 'English',
+        langHindi: 'Hindi',
+        labelAge: 'Ayu varg',
+        optSelect: 'Chunein',
+        optChild: 'Bachcha',
+        optTeen: 'Kishor',
+        optAdult: 'Vayask',
+        optOlderAdult: 'Vriddh vayask',
+        labelPregnancy: 'Garbhavastha sthiti',
+        optNotApplicable: 'Lagu nahi',
+        optPregnant: 'Garbhavati',
+        optBreastfeeding: 'Stanpan',
+        labelGoals: 'Lakshya',
+        optGeneralRelief: 'Samanya rahat',
+        optPrevention: 'Roktham',
+        optDigestiveSupport: 'Pachan sahayata',
+        optImmunitySupport: 'Rog pratirodhak sahayata',
+        labelDiet: 'Aahar prakar',
+        optMixed: 'Mishrit',
+        optVegetarian: 'Shakahari',
+        optVegan: 'Vegan',
+        optOther: 'Anya',
+        labelAllergies: 'Allergies',
+        phAllergies: 'Udaharan: penicillin, moongfali',
+        labelCurrentMeds: 'Vartaman davaiyan',
+        phCurrentMeds: 'Udaharan: metformin 500mg',
+        labelChronic: 'Dirghkalik rog',
+        phChronic: 'Udaharan: diabetes, hypertension',
+        toggleMemory: 'Behtar follow-up sandarbh ke liye conversation memory ki anumati dein',
+        toggleConsent: 'Main samajhta/samajhti hoon ki yeh diagnosis nahi hai aur main keval jankari upyog se sehmat hoon.',
+        btnTerms: 'Niyam',
+        btnPrivacy: 'Gopniyata',
+        chatTitle: 'Clinical Chat Stream',
+        phPrompt: 'Udaharan: khane ke baad acidity aur gas ho rahi hai',
+        btnSend: 'Send',
+        footDisclaimer: 'Medical disclaimer: yeh assistant sirf samanya jankari deta hai. Gambhir lakshan mein turant licensed doctor se sampark karein.',
+        termsTitle: 'Upyog ke niyam',
+        privacyTitle: 'Gopniyata suchna',
+        termsBody: `
+          <p>MediMate sirf samanya swasthya jankari deta hai, yeh medical diagnosis nahi karta.</p>
+          <p>Aapatkal mein turant local emergency services se sampark karein. Bharat mein emergency ambulance: 108.</p>
+          <p>Is assistant ka upyog karke aap sehmat hote hain ki sujhav jankari matra hain aur licensed doctor ki salah ke bina antim faisla na lein.</p>
+        `,
+        privacyBody: `
+          <p>Aapke chat data ko AI provider tak response generation ke liye bheja ja sakta hai.</p>
+          <p>Memory tabhi on rakhein jab aap pichhle messages ko context ke liye reuse karna chahte hon.</p>
+          <p>Chat mein atyadhik samvedansheel personal identifiers share na karein.</p>
+        `,
+      },
+    };
+
+    const getLang = () => (languageSelect.value === 'hi' ? 'hi' : 'en');
+    const t = (key) => uiText[getLang()][key] || uiText.en[key] || key;
+
+    const translateUi = () => {
+      document.querySelectorAll('[data-i18n]').forEach((node) => {
+        const key = node.getAttribute('data-i18n');
+        node.textContent = t(key);
+      });
+
+      document.querySelectorAll('[data-i18n-placeholder]').forEach((node) => {
+        const key = node.getAttribute('data-i18n-placeholder');
+        node.setAttribute('placeholder', t(key));
+      });
+
+      modeChip.textContent = t('mode');
+    };
+
+    const pushMessage = (text, role, isHtml = false) => {
+      const div = document.createElement('div');
+      div.className = `msg ${role}`;
+      if (isHtml) {
+        div.innerHTML = text;
+      } else {
+        div.textContent = text;
+      }
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+      return div;
+    };
+
+    const escapeHtml = (value) =>
+      String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+
+    const renderAdviceCard = (response) => {
+      const options = Array.isArray(response.suggested_options) && response.suggested_options.length
+        ? response.suggested_options
+        : [response.suggested_option || '-'];
+
+      const optionsHtml = `<ul class="source-links">${options
+        .map((opt) => `<li>${escapeHtml(opt)}</li>`)
+        .join('')}</ul>`;
+
+      const links = Array.isArray(response.source_links) ? response.source_links : [];
+      const linksHtml = links.length
+        ? `<ul class="source-links">${links
+            .map((url) => `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a></li>`)
+            .join('')}</ul>`
+        : `<p>${escapeHtml(t('noSources'))}</p>`;
+
+      return `
+        <div class="advice-card">
+          <span class="confidence">${escapeHtml(t('adviceConfidence'))}: ${escapeHtml(response.confidence || 'Medium')}</span>
+          <div><div class="advice-title">${escapeHtml(t('adviceSymptom'))}</div><div>${escapeHtml(response.symptom || t('notSpecified'))}</div></div>
+          <div><div class="advice-title">${escapeHtml(t('adviceOptions'))}</div>${optionsHtml}</div>
+          <div><div class="advice-title">${escapeHtml(t('adviceDosage'))}</div><div>${escapeHtml(response.dosage_guidance || '-')}</div></div>
+          <div><div class="advice-title">${escapeHtml(t('adviceWarnings'))}</div><div>${escapeHtml(response.warnings || '-')}</div></div>
+          <div><div class="advice-title">${escapeHtml(t('adviceDoctor'))}</div><div>${escapeHtml(response.when_to_see_doctor || '-')}</div></div>
+          <div><div class="advice-title">${escapeHtml(t('adviceWhy'))}</div><div>${escapeHtml(response.why_this_was_suggested || '-')}</div></div>
+          <div><div class="advice-title">${escapeHtml(t('adviceSources'))}</div>${linksHtml}</div>
+        </div>
+      `;
+    };
+
+    const renderEmergency = (payload) => {
+      const steps = Array.isArray(payload.next_steps) ? payload.next_steps : [];
+      const stepsHtml = steps.map((s) => `<li>${escapeHtml(s)}</li>`).join('');
+      const mapsQuery = encodeURIComponent('emergency hospital near me');
+      return `
+        <div class="advice-card">
+          <span class="confidence" style="background: linear-gradient(135deg, #ff988d, #ff6f61);">${escapeHtml(t('emergencyBadge'))}</span>
+          <div>${escapeHtml(payload.message || t('emergencyFallback'))}</div>
+          <ul class="source-links">${stepsHtml}</ul>
+          <div class="emergency-actions">
+            <a class="emergency-btn" href="tel:108">${escapeHtml(t('actionCall108'))}</a>
+            <a class="emergency-btn secondary" href="https://www.google.com/maps/search/?api=1&query=${mapsQuery}" target="_blank" rel="noopener noreferrer">${escapeHtml(t('actionNearestHospital'))}</a>
+          </div>
+        </div>
+      `;
+    };
+
+    const renderFollowUp = (payload) => {
+      const questions = Array.isArray(payload.questions) ? payload.questions : [];
+      const qHtml = questions.map((q) => `<li>${escapeHtml(q)}</li>`).join('');
+      return `
+        <div class="advice-card">
+          <span class="confidence" style="background: linear-gradient(135deg, #ffe38a, #ffb74d);">${escapeHtml(t('followupBadge'))}</span>
+          <div>${escapeHtml(payload.message || t('followupFallback'))}</div>
+          <ul class="source-links">${qHtml}</ul>
+        </div>
+      `;
+    };
+
+    const openLegal = (kind) => {
+      if (kind === 'terms') {
+        legalTitle.textContent = t('termsTitle');
+        legalContent.innerHTML = t('termsBody');
+      } else {
+        legalTitle.textContent = t('privacyTitle');
+        legalContent.innerHTML = t('privacyBody');
+      }
+      legalDialog.showModal();
+    };
+
+    termsBtn.addEventListener('click', () => openLegal('terms'));
+    privacyBtn.addEventListener('click', () => openLegal('privacy'));
+    closeLegal.addEventListener('click', () => legalDialog.close());
+
+    languageSelect.addEventListener('change', () => {
+      translateUi();
+    });
+
+    memoryToggle.addEventListener('change', () => {
+      if (!memoryToggle.checked) {
+        conversationHistory.length = 0;
+      }
+    });
+
+    const setStatus = (ok, hasKey) => {
+      if (!ok) {
+        statusText.textContent = 'API unavailable';
+        statusDot.className = 'dot error';
+        return;
+      }
+
+      if (hasKey) {
+        statusText.textContent = 'API online and key loaded';
+        statusDot.className = 'dot ok';
+      } else {
+        statusText.textContent = 'API online, key missing';
+        statusDot.className = 'dot';
+      }
+    };
+
+    const bootstrapHealth = async () => {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        setStatus(Boolean(data.ok), Boolean(data.groq_key_configured));
+      } catch (_) {
+        setStatus(false, false);
+      }
+    };
+
+    translateUi();
+    pushMessage(t('greeting'), 'bot');
+    bootstrapHealth();
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = promptInput.value.trim();
+      if (!message) return;
+
+      const language = getLang();
+      if (!consentAck.checked) {
+        pushMessage(t('consentError'), 'bot');
+        return;
+      }
+
+      pushMessage(message, 'user');
+      promptInput.value = '';
+      sendBtn.disabled = true;
+
+      const profile = {
+        age_group: ageGroup.value,
+        pregnancy_status: pregnancyStatus.value,
+        allergies: allergies.value.trim(),
+        current_medications: currentMeds.value.trim(),
+        chronic_conditions: chronicConditions.value.trim(),
+        goals: goals.value,
+        diet_type: dietType.value,
+      };
+
+      if (memoryToggle.checked) {
+        conversationHistory.push({ role: 'user', content: message });
+      }
+
+      const typing = document.createElement('div');
+      typing.className = 'msg bot';
+      typing.innerHTML = '<span class="typing"><span></span><span></span><span></span></span>';
+      messages.appendChild(typing);
+      messages.scrollTop = messages.scrollHeight;
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message,
+            language,
+            consent_ack: consentAck.checked,
+            allow_memory: memoryToggle.checked,
+            profile,
+            history: memoryToggle.checked ? conversationHistory.slice(-10) : [],
+          })
+        });
+
+        const raw = await res.text();
+        let data = {};
+        try {
+          data = raw ? JSON.parse(raw) : {};
+        } catch (_) {
+          data = { error: raw || 'Request failed' };
+        }
+
+        typing.remove();
+        if (!res.ok) {
+          pushMessage(`Error: ${data.error || t('genericError')}`, 'bot');
+        } else {
+          if (data.type === 'emergency') {
+            pushMessage(renderEmergency(data), 'bot', true);
+          } else if (data.type === 'follow_up') {
+            pushMessage(renderFollowUp(data), 'bot', true);
+          } else if (data.type === 'advice' && data.response) {
+            pushMessage(renderAdviceCard(data.response), 'bot', true);
+            if (data.follow_up_required) {
+              pushMessage(renderFollowUp(data), 'bot', true);
+            }
+            if (memoryToggle.checked) {
+              conversationHistory.push({
+                role: 'assistant',
+                content: `Symptom: ${data.response.symptom}; Suggestion: ${data.response.suggested_option}`,
+              });
+            }
+          } else {
+            pushMessage(data.reply || t('noResponse'), 'bot');
+          }
+        }
+      } catch (err) {
+        typing.remove();
+        pushMessage(`${t('networkError')}: ${err.message}`, 'bot');
+      } finally {
+        sendBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
